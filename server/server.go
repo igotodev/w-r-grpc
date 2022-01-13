@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"w-r-grpc/pb"
 	"w-r-grpc/platform"
+	"w-r-grpc/platform/bookvalidator"
 	"w-r-grpc/platform/db"
 
 	"github.com/google/uuid"
@@ -25,6 +26,10 @@ func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBook
 
 	book := db.Select(idStr)
 
+	if book.Id == "" {
+		return nil, fmt.Errorf("error: invalid id")
+	}
+
 	resp := &pb.GetBookResponse{
 		Id:        book.Id,
 		Name:      book.Name,
@@ -39,6 +44,26 @@ func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBook
 	return resp, nil
 }
 
+func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_GetAllBooksServer) error {
+	books := db.SelectAll()
+
+	for _, b := range books {
+		resp := &pb.GetAllBooksResponse{
+			Id:        b.Id,
+			Name:      b.Name,
+			Author:    b.Author,
+			Isbn:      b.Isbn,
+			Publisher: b.Publisher,
+			Genre:     b.Genre,
+			Year:      b.YearOfPublication,
+			Pages:     b.Pages,
+		}
+		stream.Send(resp)
+	}
+
+	return nil
+}
+
 func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostBookResponse, error) {
 	strId := uuid.New().String()
 
@@ -51,6 +76,10 @@ func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostB
 		Genre:             req.Genre,
 		YearOfPublication: req.Year,
 		Pages:             req.Pages,
+	}
+
+	if !bookvalidator.IsValid(book) {
+		return nil, fmt.Errorf("error: invalid data")
 	}
 
 	db.Insert(book)
@@ -79,6 +108,10 @@ func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.U
 	idStr := req.Id
 
 	book := db.Select(idStr)
+
+	if !bookvalidator.IsValid(book) {
+		return nil, fmt.Errorf("error: invalid data")
+	}
 
 	if book.Id != "" {
 

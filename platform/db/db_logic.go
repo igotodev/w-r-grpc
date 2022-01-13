@@ -47,6 +47,31 @@ func Select(idStr string) platform.Book {
 	return book
 }
 
+func SelectAll() []platform.Book {
+
+	rows, err := db.Query("SELECT * FROM books")
+	if err != nil {
+		log.Println(err)
+	}
+
+	defer rows.Close()
+
+	var books []platform.Book
+
+	for rows.Next() {
+		var book platform.Book
+
+		err = rows.Scan(&book.Id, &book.Name, &book.Author, &book.Isbn, &book.Publisher, &book.Genre, &book.YearOfPublication, &book.Pages)
+		if err != nil {
+			log.Println(err)
+		}
+
+		books = append(books, book)
+	}
+
+	return books
+}
+
 func Insert(book platform.Book) {
 	_, err = db.Exec(`INSERT INTO books (id, name, author, isbn, publisher, genre, year_of_publication, pages) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
 		book.Id, book.Name, book.Author, book.Isbn, book.Publisher, book.Genre, book.YearOfPublication, book.Pages)

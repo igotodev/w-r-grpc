@@ -7,6 +7,6 @@ type Book struct {
 	Isbn              string
 	Publisher         string
 	Genre             string
-	YearOfPublication string
+	YearOfPublication int32
 	Pages             int32
 }

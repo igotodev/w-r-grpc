@@ -4,6 +4,7 @@ option go_package = "./pb";
 
 service SessionService {
     rpc GetBook(GetBookRequest) returns (GetBookResponse);
+    rpc GetAllBooks(GetAllBooksRequest) returns (stream GetAllBooksResponse);
     rpc PostBook(PostBookRequest) returns (PostBookResponse);
     rpc DeleteBook(DeleteBookRequest) returns (DeleteBookResponse);
     rpc UpdateBook(UpdateBookRequest) returns (UpdateBookResponse);
@@ -20,7 +21,20 @@ message GetBookResponse {
     string isbn = 4;
     string publisher = 5;
     string genre = 6;
-    string year = 7;
+    int32 year = 7;
+    int32 pages = 8;
+}
+
+message GetAllBooksRequest {}
+
+message GetAllBooksResponse {
+    string id = 1;
+    string name = 2;
+    string author = 3;
+    string isbn = 4;
+    string publisher = 5;
+    string genre = 6;
+    int32 year = 7;
     int32 pages = 8;
 }
 
@@ -30,7 +44,7 @@ message PostBookRequest {
     string isbn = 3;
     string publisher = 4;
     string genre = 5;
-    string year = 6;
+    int32 year = 6;
     int32 pages = 7;
 }
 
@@ -53,7 +67,7 @@ message UpdateBookRequest {
     string isbn = 4;
     string publisher = 5;
     string genre = 6;
-    string year = 7;
+    int32 year = 7;
     int32 pages = 8;
 }
 

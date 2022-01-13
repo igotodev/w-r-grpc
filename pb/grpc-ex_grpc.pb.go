@@ -23,6 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type SessionServiceClient interface {
 	GetBook(ctx context.Context, in *GetBookRequest, opts ...grpc.CallOption) (*GetBookResponse, error)
+	GetAllBooks(ctx context.Context, in *GetAllBooksRequest, opts ...grpc.CallOption) (SessionService_GetAllBooksClient, error)
 	PostBook(ctx context.Context, in *PostBookRequest, opts ...grpc.CallOption) (*PostBookResponse, error)
 	DeleteBook(ctx context.Context, in *DeleteBookRequest, opts ...grpc.CallOption) (*DeleteBookResponse, error)
 	UpdateBook(ctx context.Context, in *UpdateBookRequest, opts ...grpc.CallOption) (*UpdateBookResponse, error)
@@ -43,6 +44,38 @@ func (c *sessionServiceClient) GetBook(ctx context.Context, in *GetBookRequest, 
 		return nil, err
 	}
 	return out, nil
+}
+
+func (c *sessionServiceClient) GetAllBooks(ctx context.Context, in *GetAllBooksRequest, opts ...grpc.CallOption) (SessionService_GetAllBooksClient, error) {
+	stream, err := c.cc.NewStream(ctx, &SessionService_ServiceDesc.Streams[0], "/SessionService/GetAllBooks", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &sessionServiceGetAllBooksClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type SessionService_GetAllBooksClient interface {
+	Recv() (*GetAllBooksResponse, error)
+	grpc.ClientStream
+}
+
+type sessionServiceGetAllBooksClient struct {
+	grpc.ClientStream
+}
+
+func (x *sessionServiceGetAllBooksClient) Recv() (*GetAllBooksResponse, error) {
+	m := new(GetAllBooksResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *sessionServiceClient) PostBook(ctx context.Context, in *PostBookRequest, opts ...grpc.CallOption) (*PostBookResponse, error) {
@@ -77,6 +110,7 @@ func (c *sessionServiceClient) UpdateBook(ctx context.Context, in *UpdateBookReq
 // for forward compatibility
 type SessionServiceServer interface {
 	GetBook(context.Context, *GetBookRequest) (*GetBookResponse, error)
+	GetAllBooks(*GetAllBooksRequest, SessionService_GetAllBooksServer) error
 	PostBook(context.Context, *PostBookRequest) (*PostBookResponse, error)
 	DeleteBook(context.Context, *DeleteBookRequest) (*DeleteBookResponse, error)
 	UpdateBook(context.Context, *UpdateBookRequest) (*UpdateBookResponse, error)
@@ -89,6 +123,9 @@ type UnimplementedSessionServiceServer struct {
 
 func (UnimplementedSessionServiceServer) GetBook(context.Context, *GetBookRequest) (*GetBookResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBook not implemented")
+}
+func (UnimplementedSessionServiceServer) GetAllBooks(*GetAllBooksRequest, SessionService_GetAllBooksServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetAllBooks not implemented")
 }
 func (UnimplementedSessionServiceServer) PostBook(context.Context, *PostBookRequest) (*PostBookResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method PostBook not implemented")
@@ -128,6 +165,27 @@ func _SessionService_GetBook_Handler(srv interface{}, ctx context.Context, dec f
 		return srv.(SessionServiceServer).GetBook(ctx, req.(*GetBookRequest))
 	}
 	return interceptor(ctx, in, info, handler)
+}
+
+func _SessionService_GetAllBooks_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetAllBooksRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(SessionServiceServer).GetAllBooks(m, &sessionServiceGetAllBooksServer{stream})
+}
+
+type SessionService_GetAllBooksServer interface {
+	Send(*GetAllBooksResponse) error
+	grpc.ServerStream
+}
+
+type sessionServiceGetAllBooksServer struct {
+	grpc.ServerStream
+}
+
+func (x *sessionServiceGetAllBooksServer) Send(m *GetAllBooksResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _SessionService_PostBook_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -208,6 +266,12 @@ var SessionService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _SessionService_UpdateBook_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetAllBooks",
+			Handler:       _SessionService_GetAllBooks_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "pb/grpc-ex.proto",
 }
