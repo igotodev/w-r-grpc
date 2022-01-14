@@ -1,4 +1,4 @@
-package platform
+package model
 
 type Book struct {
 	Id                string

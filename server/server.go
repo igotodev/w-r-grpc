@@ -8,9 +8,10 @@ import (
 	"os"
 	"os/signal"
 	"w-r-grpc/pb"
-	"w-r-grpc/platform"
 	"w-r-grpc/platform/bookvalidator"
 	"w-r-grpc/platform/db"
+	"w-r-grpc/platform/model"
+	"w-r-grpc/server/inspect"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -30,7 +31,7 @@ func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBook
 		return nil, fmt.Errorf("error: invalid id")
 	}
 
-	resp := &pb.GetBookResponse{
+	bookResp := pb.Book{
 		Id:        book.Id,
 		Name:      book.Name,
 		Author:    book.Author,
@@ -41,22 +42,30 @@ func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBook
 		Pages:     book.Pages,
 	}
 
+	resp := &pb.GetBookResponse{
+		Book: &bookResp,
+	}
+
 	return resp, nil
 }
 
 func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_GetAllBooksServer) error {
 	books := db.SelectAll()
 
-	for _, b := range books {
+	for _, book := range books {
+		bookResp := pb.Book{
+			Id:        book.Id,
+			Name:      book.Name,
+			Author:    book.Author,
+			Isbn:      book.Isbn,
+			Publisher: book.Publisher,
+			Genre:     book.Genre,
+			Year:      book.YearOfPublication,
+			Pages:     book.Pages,
+		}
+
 		resp := &pb.GetAllBooksResponse{
-			Id:        b.Id,
-			Name:      b.Name,
-			Author:    b.Author,
-			Isbn:      b.Isbn,
-			Publisher: b.Publisher,
-			Genre:     b.Genre,
-			Year:      b.YearOfPublication,
-			Pages:     b.Pages,
+			Book: &bookResp,
 		}
 		stream.Send(resp)
 	}
@@ -67,15 +76,15 @@ func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_
 func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostBookResponse, error) {
 	strId := uuid.New().String()
 
-	book := platform.Book{
+	book := model.Book{
 		Id:                strId,
-		Name:              req.Name,
-		Author:            req.Author,
-		Isbn:              req.Isbn,
-		Publisher:         req.Publisher,
-		Genre:             req.Genre,
-		YearOfPublication: req.Year,
-		Pages:             req.Pages,
+		Name:              req.Book.Name,
+		Author:            req.Book.Author,
+		Isbn:              req.Book.Isbn,
+		Publisher:         req.Book.Publisher,
+		Genre:             req.Book.Genre,
+		YearOfPublication: req.Book.Year,
+		Pages:             req.Book.Pages,
 	}
 
 	if !bookvalidator.IsValid(book) {
@@ -105,7 +114,7 @@ func (*server) DeleteBook(ctx context.Context, req *pb.DeleteBookRequest) (*pb.D
 }
 
 func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.UpdateBookResponse, error) {
-	idStr := req.Id
+	idStr := req.Book.Id
 
 	book := db.Select(idStr)
 
@@ -114,14 +123,13 @@ func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.U
 	}
 
 	if book.Id != "" {
-
-		book.Name = req.Name
-		book.Author = req.Author
-		book.Isbn = req.Isbn
-		book.Publisher = req.Publisher
-		book.Genre = req.Genre
-		book.YearOfPublication = req.Year
-		book.Pages = req.Pages
+		book.Name = req.Book.Name
+		book.Author = req.Book.Author
+		book.Isbn = req.Book.Isbn
+		book.Publisher = req.Book.Publisher
+		book.Genre = req.Book.Genre
+		book.YearOfPublication = req.Book.Year
+		book.Pages = req.Book.Pages
 
 		db.Update(book)
 
@@ -147,7 +155,11 @@ func StartGRPC(address string) {
 
 	defer lis.Close()
 
-	s := grpc.NewServer() // empty options!!!! (for security should use tls)
+	s := grpc.NewServer(
+		grpc.ChainUnaryInterceptor(
+			inspect.LogRequest,
+		),
+	) // empty options!!!! (for security should use tls)
 
 	pb.RegisterSessionServiceServer(s, &server{})
 

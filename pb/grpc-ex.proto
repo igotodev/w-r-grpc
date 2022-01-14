@@ -10,42 +10,33 @@ service SessionService {
     rpc UpdateBook(UpdateBookRequest) returns (UpdateBookResponse);
 }
 
+message Book {
+    string id = 1;
+    string name = 2;
+    string author = 3;
+    string isbn = 4;
+    string publisher = 5;
+    string genre = 6;
+    int32 year = 7;
+    int32 pages = 8;
+}
+
 message GetBookRequest {
     string id = 1;
 }
 
 message GetBookResponse {
-    string id = 1;
-    string name = 2;
-    string author = 3;
-    string isbn = 4;
-    string publisher = 5;
-    string genre = 6;
-    int32 year = 7;
-    int32 pages = 8;
+    Book book = 1;
 }
 
 message GetAllBooksRequest {}
 
 message GetAllBooksResponse {
-    string id = 1;
-    string name = 2;
-    string author = 3;
-    string isbn = 4;
-    string publisher = 5;
-    string genre = 6;
-    int32 year = 7;
-    int32 pages = 8;
+    Book book = 1;
 }
 
 message PostBookRequest {
-    string name = 1;
-    string author = 2;
-    string isbn = 3;
-    string publisher = 4;
-    string genre = 5;
-    int32 year = 6;
-    int32 pages = 7;
+    Book book = 1;
 }
 
 message PostBookResponse {
@@ -61,14 +52,7 @@ message DeleteBookResponse {
 }
 
 message UpdateBookRequest {
-    string id = 1;
-    string name = 2;
-    string author = 3;
-    string isbn = 4;
-    string publisher = 5;
-    string genre = 6;
-    int32 year = 7;
-    int32 pages = 8;
+    Book book = 1;
 }
 
 message UpdateBookResponse {
