@@ -5,11 +5,18 @@ go 1.17
 require github.com/google/uuid v1.3.0
 
 require (
+	go.uber.org/atomic v1.7.0 // indirect
+	go.uber.org/multierr v1.6.0 // indirect
+)
+
+require (
 	github.com/BurntSushi/toml v1.0.0 // indirect
 	github.com/golang/protobuf v1.5.2 // indirect
+	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/ilyakaznacheev/cleanenv v1.2.6 // indirect
 	github.com/joho/godotenv v1.4.0 // indirect
 	github.com/lib/pq v1.10.4 // indirect
+	go.uber.org/zap v1.20.0
 	golang.org/x/net v0.0.0-20220111093109-d55c255bac03 // indirect
 	golang.org/x/sys v0.0.0-20220111092808-5a964db01320 // indirect
 	golang.org/x/text v0.3.7 // indirect

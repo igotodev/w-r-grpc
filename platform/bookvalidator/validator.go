@@ -2,11 +2,11 @@ package bookvalidator
 
 import (
 	"time"
-	"w-r-grpc/platform/model"
+	"w-r-grpc/platform/entity"
 )
 
 // simple non-informative validator
-func IsValid(book model.Book) bool {
+func IsValid(book entity.Book) bool {
 
 	if len(book.Id) < 25 || len(book.Id) > 70 {
 		return false

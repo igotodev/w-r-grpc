@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 	"w-r-grpc/config"
-	"w-r-grpc/platform/model"
+	"w-r-grpc/platform/entity"
 
 	_ "github.com/lib/pq"
 )
@@ -29,7 +29,7 @@ func CloseDB() {
 	}
 }
 
-func Select(idStr string) model.Book {
+func Select(idStr string) entity.Book {
 
 	rows, err := db.Query("SELECT * FROM books WHERE id=$1", idStr)
 	if err != nil {
@@ -38,7 +38,7 @@ func Select(idStr string) model.Book {
 
 	defer rows.Close()
 
-	var book model.Book
+	var book entity.Book
 
 	for rows.Next() {
 		err = rows.Scan(&book.Id, &book.Name, &book.Author, &book.Isbn, &book.Publisher, &book.Genre, &book.YearOfPublication, &book.Pages)
@@ -50,7 +50,7 @@ func Select(idStr string) model.Book {
 	return book
 }
 
-func SelectAll() []model.Book {
+func SelectAll() []entity.Book {
 
 	rows, err := db.Query("SELECT * FROM books")
 	if err != nil {
@@ -59,10 +59,10 @@ func SelectAll() []model.Book {
 
 	defer rows.Close()
 
-	var books []model.Book
+	var books []entity.Book
 
 	for rows.Next() {
-		var book model.Book
+		var book entity.Book
 
 		err = rows.Scan(&book.Id, &book.Name, &book.Author, &book.Isbn, &book.Publisher, &book.Genre, &book.YearOfPublication, &book.Pages)
 		if err != nil {
@@ -75,7 +75,7 @@ func SelectAll() []model.Book {
 	return books
 }
 
-func Insert(book model.Book) {
+func Insert(book entity.Book) {
 	_, err = db.Exec(`INSERT INTO books (id, name, author, isbn, publisher, genre, year_of_publication, pages) VALUES($1, $2, $3, $4, $5, $6, $7, $8)`,
 		book.Id, book.Name, book.Author, book.Isbn, book.Publisher, book.Genre, book.YearOfPublication, book.Pages)
 
@@ -84,7 +84,7 @@ func Insert(book model.Book) {
 	}
 }
 
-func Update(book model.Book) {
+func Update(book entity.Book) {
 	_, err = db.Exec("UPDATE books SET name=$2, author=$3, isbn=$4, publisher=$5, genre=$6, year_of_publication=$7, pages=$8 WHERE id=$1",
 		book.Id, book.Name, book.Author, book.Isbn, book.Publisher, book.Genre, book.YearOfPublication, book.Pages)
 

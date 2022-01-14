@@ -10,8 +10,7 @@ import (
 	"w-r-grpc/pb"
 	"w-r-grpc/platform/bookvalidator"
 	"w-r-grpc/platform/db"
-	"w-r-grpc/platform/model"
-	"w-r-grpc/server/inspect"
+	"w-r-grpc/platform/entity"
 
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
@@ -76,7 +75,7 @@ func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_
 func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostBookResponse, error) {
 	strId := uuid.New().String()
 
-	book := model.Book{
+	book := entity.Book{
 		Id:                strId,
 		Name:              req.Book.Name,
 		Author:            req.Book.Author,
@@ -155,11 +154,7 @@ func StartGRPC(address string) {
 
 	defer lis.Close()
 
-	s := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(
-			inspect.LogRequest,
-		),
-	) // empty options!!!! (for security should use tls)
+	s := grpc.NewServer() // empty options!!!! (for security should use tls)
 
 	pb.RegisterSessionServiceServer(s, &server{})
 
