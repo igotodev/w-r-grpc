@@ -1,4 +1,3 @@
-driver: postgres
 port: 5432
 host: localhost
 name: my_db

@@ -2,7 +2,7 @@ package bookvalidator
 
 import (
 	"time"
-	"w-r-grpc/platform/entity"
+	"w-r-grpc/internal/domain/entity"
 )
 
 // simple non-informative validator

@@ -3,28 +3,22 @@ package server
 import (
 	"context"
 	"fmt"
-	"log"
-	"net"
-	"os"
-	"os/signal"
-	"w-r-grpc/pb"
-	"w-r-grpc/platform/bookvalidator"
-	"w-r-grpc/platform/db"
-	"w-r-grpc/platform/entity"
-
 	"github.com/google/uuid"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
+	"w-r-grpc/internal/domain/bookvalidator"
+	"w-r-grpc/internal/domain/entity"
+	"w-r-grpc/internal/domain/storage"
+	"w-r-grpc/pb"
 )
 
-type server struct {
+type Server struct {
 	pb.UnimplementedSessionServiceServer
+	Storage storage.Storage
 }
 
-func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBookResponse, error) {
+func (s *Server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBookResponse, error) {
 	idStr := req.Id
 
-	book := db.Select(idStr)
+	book := s.Storage.GetOne(idStr)
 
 	if book.Id == "" {
 		return nil, fmt.Errorf("error: invalid id")
@@ -48,8 +42,8 @@ func (*server) GetBook(ctx context.Context, req *pb.GetBookRequest) (*pb.GetBook
 	return resp, nil
 }
 
-func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_GetAllBooksServer) error {
-	books := db.SelectAll()
+func (s *Server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_GetAllBooksServer) error {
+	books := s.Storage.GetAll()
 
 	for _, book := range books {
 		bookResp := pb.Book{
@@ -72,7 +66,7 @@ func (*server) GetAllBooks(req *pb.GetAllBooksRequest, stream pb.SessionService_
 	return nil
 }
 
-func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostBookResponse, error) {
+func (s *Server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostBookResponse, error) {
 	strId := uuid.New().String()
 
 	book := entity.Book{
@@ -90,7 +84,11 @@ func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostB
 		return nil, fmt.Errorf("error: invalid data")
 	}
 
-	db.Insert(book)
+	if err := s.Storage.Post(book); err != nil {
+		return &pb.PostBookResponse{
+			Result: "error",
+		}, err
+	}
 
 	resp := &pb.PostBookResponse{
 		Result: "OK",
@@ -99,11 +97,13 @@ func (*server) PostBook(ctx context.Context, req *pb.PostBookRequest) (*pb.PostB
 	return resp, nil
 }
 
-func (*server) DeleteBook(ctx context.Context, req *pb.DeleteBookRequest) (*pb.DeleteBookResponse, error) {
+func (s *Server) DeleteBook(ctx context.Context, req *pb.DeleteBookRequest) (*pb.DeleteBookResponse, error) {
 	idStr := req.Id
 
-	if !db.Delete(idStr) {
-		return nil, fmt.Errorf("error while delete book")
+	if err := s.Storage.Delete(idStr); err != nil {
+		return &pb.DeleteBookResponse{
+			Result: "error",
+		}, err
 	}
 
 	return &pb.DeleteBookResponse{
@@ -112,10 +112,10 @@ func (*server) DeleteBook(ctx context.Context, req *pb.DeleteBookRequest) (*pb.D
 
 }
 
-func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.UpdateBookResponse, error) {
+func (s *Server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.UpdateBookResponse, error) {
 	idStr := req.Book.Id
 
-	book := db.Select(idStr)
+	book := s.Storage.GetOne(idStr)
 
 	if !bookvalidator.IsValid(book) {
 		return nil, fmt.Errorf("error: invalid data")
@@ -130,7 +130,13 @@ func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.U
 		book.YearOfPublication = req.Book.Year
 		book.Pages = req.Book.Pages
 
-		db.Update(book)
+		err := s.Storage.Update(book)
+
+		if err != nil {
+			return &pb.UpdateBookResponse{
+				Result: "error",
+			}, err
+		}
 
 		return &pb.UpdateBookResponse{
 			Result: "OK",
@@ -138,42 +144,4 @@ func (*server) UpdateBook(ctx context.Context, req *pb.UpdateBookRequest) (*pb.U
 	}
 
 	return nil, fmt.Errorf("invalid id from request")
-}
-
-func StartGRPC(address string) {
-
-	db.OpenDB()
-	defer db.CloseDB()
-
-	log.Println("grpc server is starting...")
-
-	lis, err := net.Listen("tcp", address)
-	if err != nil {
-		log.Fatalf("error while listen tcp: %v", err)
-	}
-
-	defer lis.Close()
-
-	s := grpc.NewServer() // empty options!!!! (for security should use tls)
-
-	pb.RegisterSessionServiceServer(s, &server{})
-
-	// register reflection
-	reflection.Register(s)
-
-	chWair := make(chan os.Signal, 1)
-
-	signal.Notify(chWair, os.Interrupt)
-
-	go func() {
-		if err := s.Serve(lis); err != nil {
-			log.Fatalf("error while serve: %v", err)
-			close(chWair)
-		}
-	}()
-
-	<-chWair
-	s.Stop()
-
-	log.Println("grpc server is stoped")
 }
